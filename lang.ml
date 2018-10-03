@@ -30,15 +30,15 @@ let rec string_of_val: tml_val -> string = function
   | VAbs _ -> "<function>"
   | VPair (f, s) -> "(" ^ string_of_val f ^ ", " ^ string_of_val s ^ ")"
 
-type context_type = (var_type * tml_val) list
+type environment_type = (var_type * tml_val) list
 
-let rec lookup (var: var_type) (ctxt: context_type): tml_val option =
-  match ctxt with
+let rec lookup (var: var_type) (env: environment_type): tml_val option =
+  match env with
   | [] -> None
-  | (variable, value) :: ctxt' -> if variable = var then
+  | (variable, value) :: env' -> if variable = var then
                                     Some value
                                   else
-                                    lookup var ctxt'
+                                    lookup var env'
 
 let rec subst_expr (expr: tml_expr) (var: var_type) (sub: tml_val): tml_expr =
   match expr with
@@ -53,26 +53,36 @@ and subst_val (value: tml_val) (var: var_type) (sub: tml_val): tml_val =
   | VPair (f, s) -> VPair (subst_val f var sub, subst_val s var sub)
   | _ as same -> same
 
-let rec eval (expr: tml_expr) (ctxt: context_type): tml_val =
+let rec eval (expr: tml_expr) (env: environment_type): tml_val =
   match expr with
   | EUnit -> VUnit
   | EVar v -> begin
-     match lookup v ctxt with
+    match lookup v env with
      | Some value -> value
      | None -> VUnit
     end
   | EVal v -> v
-  | EAppl (s, t) -> apply s t ctxt
-  | EPair (f, s) -> VPair (eval f ctxt, eval s ctxt)
-and apply (f: tml_expr) (arg: tml_expr) (ctxt: context_type): tml_val =
-  match eval f ctxt with
-  | VAbs (v, e) -> let argval = eval arg ctxt in
-                   eval (subst_expr e v argval) ctxt
+  | EAppl (s, t) -> apply s t env
+  | EPair (f, s) -> VPair (eval f env, eval s env)
+and apply (f: tml_expr) (arg: tml_expr) (env: environment_type): tml_val =
+  match eval f env with
+  | VAbs (v, e) -> let argval = eval arg env in
+                   eval (subst_expr e v argval) env
   | _ -> raise (ExecutionError "Bad application")
 
-let initial_context = ("id", (VAbs ("x", EVar "x"))) :: []
+let primitive_plus (x: tml_expr) (y: tml_expr): tml_expr =
+  match x, y with
+  | (EVal (VInt x'), EVal (VInt y')) -> EVal (VInt (x' + y'))
+  | _ -> raise (ExecutionError "Unexpected input to \"+\"")
+
+let initial_env = ("id", (VAbs ("x", EVar "x")))
+                      :: (("+"), (VAbs ("x", EVal (VAbs ("y",
+                                                         primitive_plus
+                                                           (EVar "x")
+                                                           (EVar "y"))))))
+                      :: []
 
 let () =
-  let expr = EAppl (EVar "id", EVal (VInt 5)) in
-  let ev = eval expr initial_context in
+  let expr = EAppl (EVar "id", (EAppl (EVar "+", EVal (VInt 9)))) in
+  let ev = eval expr initial_env in
   print_endline (string_of_val ev)
