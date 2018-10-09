@@ -1,2 +1,5 @@
+(ocamllex lexer)
+(ocamlyacc parser)
+
 (executable
  (name main))
