@@ -8,7 +8,7 @@ type const_type = string
 
 type tml_type =
   | TUnit
-  | TFun of var_type * tml_type
+  | TFun of tml_type * tml_type
   | TProd of tml_type * tml_type
   | TType of ident
 
