@@ -3,7 +3,7 @@ exception ExecutionError of string
 let error str = raise (ExecutionError ("execution error: " ^ str))
 
 type ident = string
-type var_type = ident
+type var_type = NamedVar of string | LambdaVar of int
 type const_type = string
 
 type tml_type =
@@ -23,5 +23,5 @@ and tml_val =
   | VUnit
   | VInt of int
   | VString of string
-  | VAbs of var_type * tml_expr
+  | VAbs of tml_expr
   | VPair of tml_val * tml_val

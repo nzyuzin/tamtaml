@@ -17,19 +17,23 @@ let rec lookup (var: var_type) (env: environment_type): tml_val option =
                                   else
                                     lookup var env'
 
-let rec subst_expr (expr: tml_expr) (var: var_type) (sub: tml_val): tml_expr =
+let rec subst_var (expr: Lang.tml_expr) (var: int) (value: tml_val) =
   match expr with
-  | EUnit -> EUnit
-  | EVar var' as same -> if var' = var then EVal sub else same
-  | EVal v -> EVal (subst_val v var sub)
-  | EAppl (s, t) -> EAppl (subst_expr s var sub, subst_expr t var sub)
-  | EPrimAppl (f, l) -> EPrimAppl (f, List.map (fun e -> subst_expr e var sub) l)
-  | EPair (f, s) -> EPair (subst_expr f var sub, subst_expr s var sub)
-and subst_val (value: tml_val) (var: var_type) (sub: tml_val): tml_val =
-  match value with
-  | VAbs (v, e) -> VAbs (v, subst_expr e var sub)
-  | VPair (f, s) -> VPair (subst_val f var sub, subst_val s var sub)
-  | _ as same -> same
+  | EUnit as same-> same
+  | EVar (LambdaVar var') as same ->
+     if var = var' then EVal value
+     else same
+  | EVar _ as same -> same
+  | EVal (VAbs e) -> EVal (VAbs (subst_var e (var + 1) value))
+  | EVal (VPair (VAbs e, s)) ->
+     EVal (VPair (VAbs (subst_var e (var + 1) value), s))
+  | EVal (VPair (f, VAbs e)) ->
+     EVal (VPair (f, VAbs (subst_var e (var + 1) value)))
+  | EVal _ as same -> same
+  | EAppl (s, t) -> EAppl (subst_var s var value, subst_var t var value)
+  | EPrimAppl (f, l) ->
+     EPrimAppl (f, List.map (fun e -> subst_var e var value) l)
+  | EPair (f, s) -> EPair (subst_var f var value, subst_var s var value)
 
 let rec eval (expr: tml_expr) (env: environment_type): tml_val =
   match expr with
@@ -37,7 +41,7 @@ let rec eval (expr: tml_expr) (env: environment_type): tml_val =
   | EVar v -> begin
     match lookup v env with
      | Some value -> value
-     | None -> VUnit
+     | None -> error "undefined variable"
     end
   | EVal v -> v
   | EAppl (s, t) -> apply s t env
@@ -45,8 +49,8 @@ let rec eval (expr: tml_expr) (env: environment_type): tml_val =
   | EPair (f, s) -> VPair (eval f env, eval s env)
 and apply (f: tml_expr) (arg: tml_expr) (env: environment_type): tml_val =
   match eval f env with
-  | VAbs (v, e) -> let argval = eval arg env in
-                   eval (subst_expr e v argval) env
+  | VAbs e -> let argval = eval arg env in
+                   eval (subst_var e 0 argval) env
   | _ -> error "bad application"
 and primitive_apply (f: ident) (l: tml_expr list) (env: environment_type): tml_val =
   let evaled_l = List.map (fun e -> eval e env) l in
@@ -64,9 +68,10 @@ and primitive_apply (f: ident) (l: tml_expr list) (env: environment_type): tml_v
                 end
   | _ -> error "unkown primitive function"
 
-let initial_env = ("id", (VAbs ("x", EVar "x")))
-                  :: ("+", (VAbs ("x", EVal (VAbs ("y", EPrimAppl
-                                                          ("+",
-                                                           [(EVar "x");
-                                                            (EVar "y")]))))))
-                  :: []
+let initial_env: environment_type =
+  (NamedVar "id", (VAbs (EVar (LambdaVar 0))))
+  :: (NamedVar "+", (VAbs (EVal (VAbs (EPrimAppl
+                                         ("+",
+                                          [(EVar (LambdaVar 0));
+                                           (EVar (LambdaVar 1))]))))))
+  :: []
