@@ -9,8 +9,9 @@ rule token = parse
 | ',' { COMMA }
 | '(' { LPAREN }
 | ')' { RPAREN }
+| '"' ['a'-'z' 'A'-'Z' '0'-'9' ' ']+ '"' as lxm { STRING(lxm) }
 | ['\n' ] { EOL }
 | ['0'-'9']+ as lxm { INT(int_of_string lxm) }
-| ['a'-'z']+ as lxm { IDENT(lxm) }
+| ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9']+  as lxm { IDENT(lxm) }
 | ['+'] as lxm { IDENT(String.make 1 lxm) }
 | eof { raise Eof }

@@ -25,6 +25,7 @@
 %token FUNARROW
 %token COMMA
 %token <int> INT
+%token <string> STRING
 %token <string> IDENT
 %start main             /* the entry point */
 %type <Lang.tml_expr> main expr
@@ -43,5 +44,6 @@ expr:
 ;
 value:
   | INT { VInt $1 }
+  | STRING { VString $1 }
   | FUN IDENT FUNARROW expr { VAbs (subst_var $2 0 $4) }
 ;
