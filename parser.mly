@@ -28,14 +28,20 @@
 %token <string> IDENT
 %start main             /* the entry point */
 %type <Lang.tml_expr> main expr
+%type <Lang.tml_val> value
 %%
 main:
 expr EOL { $1 }
 ;
 expr:
+  | LPAREN expr RPAREN { $2 }
   | LPAREN RPAREN { EUnit }
-  | FUN IDENT FUNARROW expr { EVal (VAbs (subst_var $2 0 $4)) }
   | IDENT { EVar (NamedVar $1) }
-  | INT { EVal (VInt $1) }
-  | LPAREN expr expr RPAREN { EAppl ($2, $3) }
-  | LPAREN expr COMMA expr RPAREN { EPair ($2, $4) };
+  | expr expr { EAppl ($1, $2) }
+  | expr COMMA expr { EPair ($1, $3) }
+  | value { EVal $1 }
+;
+value:
+  | INT { VInt $1 }
+  | FUN IDENT FUNARROW expr { VAbs (subst_var $2 0 $4) }
+;
