@@ -30,6 +30,11 @@
 %start main             /* the entry point */
 %type <Lang.tml_expr> main expr
 %type <Lang.tml_val> value
+%nonassoc STRING INT IDENT
+%right COMMA
+%left appl
+%right func FUN
+%right LPAREN
 %%
 main:
 expr EOL { $1 }
@@ -38,12 +43,12 @@ expr:
   | LPAREN expr RPAREN { $2 }
   | LPAREN RPAREN { EUnit }
   | IDENT { EVar (NamedVar $1) }
-  | expr expr { EAppl ($1, $2) }
+  | expr expr %prec appl { EAppl ($1, $2) }
   | expr COMMA expr { EPair ($1, $3) }
   | value { EVal $1 }
 ;
 value:
   | INT { VInt $1 }
   | STRING { VString $1 }
-  | FUN IDENT FUNARROW expr { VAbs (subst_var $2 0 $4) }
+  | FUN IDENT FUNARROW expr %prec func { VAbs (subst_var $2 0 $4) }
 ;
