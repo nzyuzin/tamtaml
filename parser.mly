@@ -30,11 +30,11 @@
 %start main             /* the entry point */
 %type <Lang.tml_expr> main expr
 %type <Lang.tml_val> value
-%nonassoc STRING INT IDENT
-%right COMMA
-%left appl
-%right func FUN
 %right LPAREN
+%right func FUN
+%right COMMA
+%nonassoc STRING INT IDENT
+%left appl
 %%
 main:
 expr EOL { $1 }
