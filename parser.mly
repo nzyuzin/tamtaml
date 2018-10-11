@@ -25,19 +25,23 @@
          ELet (v, t, subst_var name var e, subst_var name var c)
 %}
 %token LET FUN IN EQUALS FUNARROW COMMA LPAREN RPAREN
+%token PLUS MINUS
+%token MULT DIV
 %token <int> INT
 %token <string> STRING
 %token <string> IDENT
 %token EOL
 %start main             /* the entry point */
-%type <Lang.tml_expr> main expr
+%type <Lang.tml_expr> main expr arithexpr
 %type <Lang.tml_val> value
 
 %nonassoc letexp
-%right func
+%right FUNC
 %nonassoc FUN LET LPAREN STRING INT IDENT
 %left COMMA
-%nonassoc appl
+%left PLUS MINUS
+%left MULT DIV
+%nonassoc APPL
 
 %%
 main:
@@ -47,14 +51,21 @@ expr:
   | LPAREN expr RPAREN { $2 }
   | LPAREN RPAREN { EUnit }
   | IDENT { EVar (NamedVar $1) }
-  | expr expr %prec appl { EAppl ($1, $2) }
+  | expr expr %prec APPL { EAppl ($1, $2) }
   | expr COMMA expr { EPair ($1, $3) }
   | LET IDENT EQUALS expr IN expr %prec letexp
     { ELet (NamedVar $2, None, $4, $6) }
+  | arithexpr { $1 }
   | value { EVal $1 }
+;
+arithexpr:
+  | expr PLUS expr { EPrimAppl (Lang.PLUS, [$1; $3]) }
+  | expr MINUS expr { EPrimAppl (Lang.MINUS, [$1; $3]) }
+  | expr DIV expr { EPrimAppl (Lang.DIV, [$1; $3]) }
+  | expr MULT expr { EPrimAppl (Lang.MULT, [$1; $3]) }
 ;
 value:
   | INT { VInt $1 }
   | STRING { VString $1 }
-  | FUN IDENT FUNARROW expr %prec func { VAbs (None, subst_var $2 0 $4) }
+  | FUN IDENT FUNARROW expr %prec FUNC { VAbs (None, subst_var $2 0 $4) }
 ;

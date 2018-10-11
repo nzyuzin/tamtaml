@@ -48,7 +48,7 @@ let rec eval (expr: tml_expr) (env: environment_type): tml_val =
     end
   | EVal v -> v
   | EAppl (s, t) -> apply s t env
-  | EPrimAppl (f, l) -> primitive_apply f l env
+  | EPrimAppl (op, l) -> apply_operation op l env
   | EPair (f, s) -> VPair (eval f env, eval s env)
   | ELet (var, _, expr', cont) ->
      let ev_expr' = eval expr' env in
@@ -59,27 +59,24 @@ and apply (f: tml_expr) (arg: tml_expr) (env: environment_type): tml_val =
   | VAbs (_, e) -> let argval = eval arg env in
                    eval (subst_var e 0 argval) env
   | _ -> error "bad application"
-and primitive_apply (f: ident) (l: tml_expr list) (env: environment_type): tml_val =
+and apply_operation (op: primitive_op) (l: tml_expr list) (env: environment_type): tml_val =
   let evaled_l = List.map (fun e -> eval e env) l in
   let check_arguments sz f =
     let actual_size = List.length l in
-    if actual_size <> sz then error ("unexpected number of arguments to " ^ f
-                                     ^ ": " ^ string_of_int actual_size
+    if actual_size <> sz then error ("unexpected number of arguments to "
+                                     ^ (string_of_op f) ^ ": "
+                                     ^ string_of_int actual_size
                                      ^ "instead of " ^ string_of_int sz) in
-  match f with
-  | "+" as p -> let _ = check_arguments 2 p in
-                begin
-                  match (List.nth evaled_l 0, List.nth evaled_l 1) with
-                  | (VInt x'), (VInt y') -> VInt (x' + y')
-                  | _ -> error "unexpected input to \"+\""
-                end
-  | _ -> error "unkown primitive function"
+  let _ = check_arguments 2 op in
+  match (List.nth evaled_l 0, List.nth evaled_l 1) with
+  | (VInt x'), (VInt y') ->
+     begin match op with
+     | PLUS -> VInt (x' + y')
+     | MINUS -> VInt (x' - y')
+     | MULT -> VInt (x' * y')
+     | DIV -> VInt (x' / y')
+     end
+  | _ -> error "unexpected input to \"+\""
 
 let initial_env: environment_type =
-  (NamedVar "id", (VAbs (None, EVar (LambdaVar 0))))
-  :: (NamedVar "+",
-      (VAbs (None, EVal (VAbs (None, EPrimAppl
-                                       ("+",
-                                        [(EVar (LambdaVar 0));
-                                         (EVar (LambdaVar 1))]))))))
-  :: []
+  (NamedVar "id", (VAbs (None, EVar (LambdaVar 0)))) :: []
