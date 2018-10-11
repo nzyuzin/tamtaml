@@ -1,5 +1,9 @@
 open Lang
 
+exception ExecutionError of string
+
+let error str = raise (ExecutionError ("execution error: " ^ str))
+
 let rec string_of_val: tml_val -> string = function
   | VUnit -> "()"
   | VInt i -> string_of_int i

@@ -30,7 +30,8 @@
 %token <int> INT
 %token <string> STRING
 %token <string> IDENT
-%token EOL
+%token ENDEXPR
+%token EOF
 %start main             /* the entry point */
 %type <Lang.tml_expr> main expr arithexpr
 %type <Lang.tml_val> value
@@ -44,8 +45,13 @@
 %nonassoc APPL
 
 %%
+exprend:
+  | ENDEXPR {}
+  | EOF {}
+;
 main:
-expr EOL { $1 }
+  | EOF { raise Util.Eof }
+  | expr exprend { $1 }
 ;
 expr:
   | LPAREN expr RPAREN { $2 }
