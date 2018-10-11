@@ -36,10 +36,10 @@
 %type <Lang.tml_expr> main expr
 %type <Lang.tml_val> value
 
-%nonassoc LPAREN STRING INT IDENT
+%right func
+%nonassoc FUN LPAREN STRING INT IDENT
 %left COMMA
 %nonassoc appl
-%nonassoc FUN func
 
 %%
 main:
