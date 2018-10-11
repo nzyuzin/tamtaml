@@ -5,6 +5,9 @@ exception Eof
 rule token = parse
 | [' ' '\t'] { token lexbuf } (* skip blanks *)
 | "fun" { FUN }
+| "let" { LET }
+| "in" { IN }
+| "=" { EQUALS }
 | "->" { FUNARROW }
 | ',' { COMMA }
 | '(' { LPAREN }

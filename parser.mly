@@ -19,25 +19,23 @@
        EPrimAppl (f, List.map (fun e -> subst_var name var e) l)
     | EPair (f, s) -> EPair (subst_var name var f, subst_var name var s)
     | ELet (v, t, e, c) ->
-       if v != NamedVar name then
-         ELet (v, t, subst_var name var e, subst_var name var c)
-       else
+       if v = NamedVar name then
          ELet (v, t, subst_var name var e, c)
+       else
+         ELet (v, t, subst_var name var e, subst_var name var c)
 %}
-%token LPAREN RPAREN
-%token EOL
-%token FUN
-%token FUNARROW
-%token COMMA
+%token LET FUN IN EQUALS FUNARROW COMMA LPAREN RPAREN
 %token <int> INT
 %token <string> STRING
 %token <string> IDENT
+%token EOL
 %start main             /* the entry point */
 %type <Lang.tml_expr> main expr
 %type <Lang.tml_val> value
 
+%nonassoc letexp
 %right func
-%nonassoc FUN LPAREN STRING INT IDENT
+%nonassoc FUN LET LPAREN STRING INT IDENT
 %left COMMA
 %nonassoc appl
 
@@ -51,6 +49,8 @@ expr:
   | IDENT { EVar (NamedVar $1) }
   | expr expr %prec appl { EAppl ($1, $2) }
   | expr COMMA expr { EPair ($1, $3) }
+  | LET IDENT EQUALS expr IN expr %prec letexp
+    { ELet (NamedVar $2, None, $4, $6) }
   | value { EVal $1 }
 ;
 value:

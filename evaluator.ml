@@ -63,7 +63,7 @@ and primitive_apply (f: ident) (l: tml_expr list) (env: environment_type): tml_v
   let evaled_l = List.map (fun e -> eval e env) l in
   let check_arguments sz f =
     let actual_size = List.length l in
-    if actual_size != sz then error ("unexpected number of arguments to " ^ f
+    if actual_size <> sz then error ("unexpected number of arguments to " ^ f
                                      ^ ": " ^ string_of_int actual_size
                                      ^ "instead of " ^ string_of_int sz) in
   match f with
