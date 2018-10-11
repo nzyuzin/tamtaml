@@ -19,9 +19,10 @@ type tml_expr =
   | EAppl of tml_expr * tml_expr
   | EPrimAppl of ident * (tml_expr list)
   | EPair of tml_expr * tml_expr
+  | ELet of var_type * tml_type option * tml_expr * tml_expr
 and tml_val =
   | VUnit
   | VInt of int
   | VString of string
-  | VAbs of tml_expr
+  | VAbs of tml_type option * tml_expr
   | VPair of tml_val * tml_val

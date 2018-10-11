@@ -8,16 +8,21 @@
        else
          same
     | EVar _ as same -> same
-    | EVal (VAbs e) -> EVal (VAbs (subst_var name (var + 1) e))
-    | EVal (VPair (VAbs e, s)) ->
-       EVal (VPair (VAbs (subst_var name (var + 1) e), s))
-    | EVal (VPair (f, VAbs e)) ->
-       EVal (VPair (f, VAbs (subst_var name (var + 1) e)))
+    | EVal (VAbs (t,e)) -> EVal (VAbs (t,subst_var name (var + 1) e))
+    | EVal (VPair (VAbs (t,e), s)) ->
+       EVal (VPair (VAbs (t,subst_var name (var + 1) e), s))
+    | EVal (VPair (f, VAbs (t,e))) ->
+       EVal (VPair (f, VAbs (t,subst_var name (var + 1) e)))
     | EVal _ as same -> same
     | EAppl (s, t) -> EAppl (subst_var name var s, subst_var name var t)
     | EPrimAppl (f, l) ->
        EPrimAppl (f, List.map (fun e -> subst_var name var e) l)
     | EPair (f, s) -> EPair (subst_var name var f, subst_var name var s)
+    | ELet (v, t, e, c) ->
+       if v != NamedVar name then
+         ELet (v, t, subst_var name var e, subst_var name var c)
+       else
+         ELet (v, t, subst_var name var e, c)
 %}
 %token LPAREN RPAREN
 %token EOL
@@ -30,11 +35,12 @@
 %start main             /* the entry point */
 %type <Lang.tml_expr> main expr
 %type <Lang.tml_val> value
-%right LPAREN
-%right func FUN
-%right COMMA
-%nonassoc STRING INT IDENT
-%left appl
+
+%nonassoc LPAREN STRING INT IDENT
+%left COMMA
+%nonassoc appl
+%nonassoc FUN func
+
 %%
 main:
 expr EOL { $1 }
@@ -50,5 +56,5 @@ expr:
 value:
   | INT { VInt $1 }
   | STRING { VString $1 }
-  | FUN IDENT FUNARROW expr %prec func { VAbs (subst_var $2 0 $4) }
+  | FUN IDENT FUNARROW expr %prec func { VAbs (None, subst_var $2 0 $4) }
 ;

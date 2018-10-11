@@ -9,6 +9,8 @@ let rec string_of_val: tml_val -> string = function
 
 type environment_type = (var_type * tml_val) list
 
+let extend_env k v (env: environment_type) = (k, v) :: env
+
 let rec lookup (var: var_type) (env: environment_type): tml_val option =
   match env with
   | [] -> None
@@ -24,16 +26,17 @@ let rec subst_var (expr: Lang.tml_expr) (var: int) (value: tml_val) =
      if var = var' then EVal value
      else same
   | EVar _ as same -> same
-  | EVal (VAbs e) -> EVal (VAbs (subst_var e (var + 1) value))
-  | EVal (VPair (VAbs e, s)) ->
-     EVal (VPair (VAbs (subst_var e (var + 1) value), s))
-  | EVal (VPair (f, VAbs e)) ->
-     EVal (VPair (f, VAbs (subst_var e (var + 1) value)))
+  | EVal (VAbs (t,e)) -> EVal (VAbs (t,subst_var e (var + 1) value))
+  | EVal (VPair (VAbs (t, e), s)) ->
+     EVal (VPair (VAbs (t, subst_var e (var + 1) value), s))
+  | EVal (VPair (f, VAbs (t,e))) ->
+     EVal (VPair (f, VAbs (t,subst_var e (var + 1) value)))
   | EVal _ as same -> same
   | EAppl (s, t) -> EAppl (subst_var s var value, subst_var t var value)
   | EPrimAppl (f, l) ->
      EPrimAppl (f, List.map (fun e -> subst_var e var value) l)
   | EPair (f, s) -> EPair (subst_var f var value, subst_var s var value)
+  | ELet (v, t, e, c) -> ELet (v, t, subst_var e var value, subst_var c var value)
 
 let rec eval (expr: tml_expr) (env: environment_type): tml_val =
   match expr with
@@ -47,9 +50,13 @@ let rec eval (expr: tml_expr) (env: environment_type): tml_val =
   | EAppl (s, t) -> apply s t env
   | EPrimAppl (f, l) -> primitive_apply f l env
   | EPair (f, s) -> VPair (eval f env, eval s env)
+  | ELet (var, _, expr', cont) ->
+     let ev_expr' = eval expr' env in
+     let new_env = extend_env var ev_expr' env in
+     eval cont new_env
 and apply (f: tml_expr) (arg: tml_expr) (env: environment_type): tml_val =
   match eval f env with
-  | VAbs e -> let argval = eval arg env in
+  | VAbs (_, e) -> let argval = eval arg env in
                    eval (subst_var e 0 argval) env
   | _ -> error "bad application"
 and primitive_apply (f: ident) (l: tml_expr list) (env: environment_type): tml_val =
@@ -69,9 +76,10 @@ and primitive_apply (f: ident) (l: tml_expr list) (env: environment_type): tml_v
   | _ -> error "unkown primitive function"
 
 let initial_env: environment_type =
-  (NamedVar "id", (VAbs (EVar (LambdaVar 0))))
-  :: (NamedVar "+", (VAbs (EVal (VAbs (EPrimAppl
-                                         ("+",
-                                          [(EVar (LambdaVar 0));
-                                           (EVar (LambdaVar 1))]))))))
+  (NamedVar "id", (VAbs (None, EVar (LambdaVar 0))))
+  :: (NamedVar "+",
+      (VAbs (None, EVal (VAbs (None, EPrimAppl
+                                       ("+",
+                                        [(EVar (LambdaVar 0));
+                                         (EVar (LambdaVar 1))]))))))
   :: []
